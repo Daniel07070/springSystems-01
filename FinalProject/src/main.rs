@@ -89,18 +89,6 @@ fn main() {
 
                 let s = stats_monitor.lock().unwrap();
 
-                // if s.completed_tasks == 1000{
-                //     println!("\nFinal stats reached. Monitor exiting...");
-                //     println!("\n===== MONITOR =====");
-                //     println!("Completed tasks: {}", s.completed_tasks);
-                //     println!("Busy time: {}", s.busy_time);
-                //     println!("Total time: {}", s.total_time);
-                //     println!("CPU usage: {:.2}%", utilization);
-                //     println!("Avg wait time: {:.2}", avg_wait);
-                //     println!("Avg turnaround time: {:.2}", avg_turnaround);
-                //     println!("===================\n");
-                //     break;
-                // }
 
                 let utilization = if s.total_time > 0 {
                     (s.busy_time as f64 / s.total_time as f64) * 100.0
@@ -118,7 +106,8 @@ fn main() {
                 } else {
                     0.0
                 };
-
+                
+                
                 println!("\n===== MONITOR =====");
                 println!("Completed tasks: {}", s.completed_tasks);
                 println!("Busy time: {}", s.busy_time);
@@ -129,6 +118,8 @@ fn main() {
                 println!("Avg wait time: {:.2}", avg_wait);
                 println!("Avg turnaround time: {:.2}", avg_turnaround);
                 println!("===================\n");
+        
+                
 
                 if s.completed_tasks == 1000{
                     println!("\nFinal stats reached. Monitor exiting...");
@@ -174,8 +165,15 @@ fn main() {
 
                         let run_time = task.cpu_cost;
                         task.cpu_cost = 0;
+                        let current_time = {
+                        let s = stats.lock().unwrap();
+                            s.total_time
+                        };
+                        if task.start_time.is_none() {
+                        task.start_time = Some(current_time);
+                    }
 
-                        thread::sleep(Duration::from_millis(task.cpu_cost as u64));
+                        thread::sleep(Duration::from_millis(task.duration));
 
                         {
                             let mut s = stats.lock().unwrap();
@@ -256,7 +254,7 @@ fn main() {
                     let turnaround = finish - task.arrival_time;
 
                     let mut s = stats_manager.lock().unwrap();
-                     s.total_wait_time += wait;
+                    s.total_wait_time += wait;
                     s.total_turnaround_time += turnaround;
                 }
             }
@@ -273,9 +271,9 @@ fn main() {
                     //
                     let mut task = task;
 
-                    if task.start_time.is_none() {
-                        task.start_time = Some(time);
-                    }
+                    // if task.start_time.is_none() {
+                    //     task.start_time = Some(time);
+                    // }
                     tx_work_manager.send(task).unwrap();
                 } else {
                     ready_queue.push_back(task);
